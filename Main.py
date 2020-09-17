@@ -1,7 +1,6 @@
 import config
 import ConfBot as Bot
 import requests
-import sqlite3
 import datetime
 
 vanga_pic_url = 'https://s.gorodche.ru/localStorage/news/73' \
@@ -78,7 +77,7 @@ def main():
     while True:
 
         # Send every day greetings
-        if today == now.day and hour == 0:
+        if today == now.day and hour == 8:
             bot.greetings(group_id)
             today = (datetime.date.today() + datetime.timedelta(days=1)).day
 
