@@ -2,24 +2,7 @@ import requests
 import re
 import sqlite3
 from bs4 import BeautifulSoup
-import warnings
-import functools
-import datetime
-
-
-def deprecated(func):
-    """This is a decorator which can be used to mark functions
-    as deprecated. It will result in a warning being emitted
-    when the function is used."""
-    @functools.wraps(func)
-    def new_func(*args, **kwargs):
-        warnings.simplefilter('always', DeprecationWarning)  # turn off filter
-        warnings.warn("Call to deprecated function {}.".format(func.__name__),
-                      category=DeprecationWarning,
-                      stacklevel=2)
-        warnings.simplefilter('default', DeprecationWarning)  # reset filter
-        return func(*args, **kwargs)
-    return new_func
+# import datetime
 
 
 class Bot:
@@ -27,20 +10,7 @@ class Bot:
     def __init__(self, token):
         self.__token = token
         self.__api_url = 'https://api.telegram.org/bot{}/'.format(self.__token)
-        self.__now = datetime.datetime.now()
-        self.__weather_url = 'https://www.meteoservice.ru/weather/now/moskva'
-        self.__covid_url = 'https://api.covid19api.com/summary'
-        self.__anecdor_url = 'https://anekdot-z.ru/random-anekdot'
-
-    @deprecated
-    def create_db(self):
-        conn = sqlite3.connect('bot_bd.db')
-        c = conn.cursor()
-        c.execute('CREATE TABLE "episodes" '
-                  '("NUMBER"    INTEGER NOT NULL UNIQUE, '
-                  '"NAME"       TEXT NOT NULL UNIQUE);')
-        conn.commit()
-        c.close()
+        # self.__now = datetime.datetime.now()
 
     def get_updates(self, offset=None, timeout=0):
         method = 'getUpdates'
@@ -159,41 +129,10 @@ class Bot:
             pass
         return last_chat_title
 
-    def get_weather(self):
-        webpage_response = requests.get(self.__weather_url)
-        webpage = webpage_response.content
-        soup = BeautifulSoup(webpage, 'html.parser')
-        # get weather description
-        mydivs = soup.findAll("div",
-                              class_="small-12 medium-6 large-7 columns text-center")
-        regex = re.compile(r'>(.*)<')
-        weather = str(regex.findall(str(mydivs[0])))[2:-2]
-        # get temperature
-        mydivs = soup.findAll("div", class_="temperature")
-        regex = re.compile(r'e">(.*)<')
-        temperature = str(regex.findall(repr(mydivs)))[2:-2]
-        return '''Температура за бортом: {}\n{}'''.format(temperature, weather)
-
-    def get_covid(self):
-        response = requests.get(self.__covid_url)
-        info = response.json()['Countries']
-        return (info[139]['NewConfirmed'], info[139]['TotalConfirmed'],
-                info[139]['NewRecovered'], info[139]['TotalRecovered'],
-                info[139]['NewDeaths'], info[139]['TotalDeaths'])
-
-    def get_anekdot(self):
-        webpage_response = requests.get(self.__anecdor_url)
-        webpage = webpage_response.content
-        soup = BeautifulSoup(webpage, 'html.parser')
-        mydivs = soup.findAll('div', class_ = 'anekdot-content')
-        anekdot = re.sub(r'</span><br/><span>', '\n', str(mydivs))
-        anekdot = re.sub(r'[<>[\]abcdefghijklmnopqrstuvwxyz"=/_]', '', anekdot)
-        return anekdot
-
-    def greetings(self, group_id):
-        weather = self.get_weather()
-        greetings = 'Доброе утро, господа!\n\n' \
-            '{}\n\n' \
-            'Желаю всем удачного дня!\n\n{}' \
-            .format(weather, str(self.__now)[:-7])
-        self.send_message(group_id, greetings)
+    # def greetings(self, group_id):
+    #     weather = self.get_weather()
+    #     greetings = 'Доброе утро, господа!\n\n' \
+    #         '{}\n\n' \
+    #         'Желаю всем удачного дня!\n\n{}' \
+    #         .format(weather, str(self.__now)[:-7])
+    #     self.send_message(group_id, greetings)
