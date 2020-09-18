@@ -11,7 +11,8 @@ supergroup_id = config.supergroup_id
 my_id = config.my_id
 
 greetings = ('привет', 'здравствуй', 'здравствуйте',
-             'hello', 'здарова', 'здорова')
+             'hello', 'здарова', 'yo', 'jo', 'жэвра', 'жевра',
+             'салют', 'здорова', 'йо', 'жо', 'рыцк', 'рыч')
 
 bot_help = '1. /episode <Название эпизода>\n' \
     'Установить новый эпизод, пишите только название\n\n' \
@@ -21,25 +22,32 @@ bot_help = '1. /episode <Название эпизода>\n' \
     'Показать название N эпизода\n\n' \
     '4. /weather\n' \
     'Показать погоду в Москве\n\n' \
-    '5. /covid\n' \
+    '5. /anekdot\n' \
+    'Рассказать Дрону анекдот\n\n' \
+    '6. /covid\n' \
     'Показать статистику по COVID-19 в России'
 
 bot = Bot.Bot(config.token)
 
 
 def common_compare(last_chat_id, last_chat_text):
+    if last_chat_text.lower() == '/anekdot':
+        bot.send_message(last_chat_id, '@Naravir, для тебя:\n\n{}'.format(bot.get_anekdot()))
     if last_chat_text.lower() == '/weather':
         weather = bot.get_weather()
         bot.send_message(last_chat_id, weather)
     if last_chat_text.lower() == '/covid':
         covid_info = bot.get_covid()
         covid_text = 'Коронавирус в России:\n\n' \
-                     'Новые случаи: +{}\n' \
+                     'Новые случаи: {}\n' \
                      'Всего случаев: {}\n\n' \
-                     'Новые погибшие: +{}\n' \
+                     'Новых излечившихся: {}\n' \
+                     'Всего излечившихся: {}\n\n' \
+                     'Новые погибшие: {}\n' \
                      'Всего погибших: {}' \
                      .format(covid_info[0], covid_info[1], 
-                     covid_info[2], covid_info[3])
+                             covid_info[2], covid_info[3],
+                             covid_info[4], covid_info[5])
         bot.send_message(last_chat_id, covid_text)    
 
 
@@ -63,7 +71,7 @@ def private_compare(last_chat_id, last_chat_text,
         bot.send_photo(last_chat_id, vanga_pic_url)
     if last_chat_text.lower().startswith('/mail'):
         bot.send_mailing(last_update, group_id,
-                         last_chat_text.lower()[6:])
+                         last_chat_text[6:])
 
 
 def main():
@@ -77,7 +85,7 @@ def main():
     while True:
 
         # Send every day greetings
-        if today == now.day and hour == 8:
+        if today == now.day and hour == 10:
             bot.greetings(group_id)
             today = (datetime.date.today() + datetime.timedelta(days=1)).day
 

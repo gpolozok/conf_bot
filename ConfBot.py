@@ -29,7 +29,8 @@ class Bot:
         self.__api_url = 'https://api.telegram.org/bot{}/'.format(self.__token)
         self.__now = datetime.datetime.now()
         self.__weather_url = 'https://www.meteoservice.ru/weather/now/moskva'
-        self.__covid_url = 'https://api.thevirustracker.com/free-api?countryTotal=RU'
+        self.__covid_url = 'https://api.covid19api.com/summary'
+        self.__anecdor_url = 'https://anekdot-z.ru/random-anekdot'
 
     @deprecated
     def create_db(self):
@@ -175,22 +176,24 @@ class Bot:
 
     def get_covid(self):
         response = requests.get(self.__covid_url)
-        info = response.json()['countrydata']
-        day_new = info[0]['total_new_cases_today']
-        day_death = info[0]['total_new_deaths_today']
-        total_cases = info[0]['total_cases']
-        total_deaths = info[0]['total_deaths']
-        return (day_new, total_cases, day_death, total_deaths)
+        info = response.json()['Countries']
+        return (info[139]['NewConfirmed'], info[139]['TotalConfirmed'],
+                info[139]['NewRecovered'], info[139]['TotalRecovered'],
+                info[139]['NewDeaths'], info[139]['TotalDeaths'])
+
+    def get_anekdot(self):
+        webpage_response = requests.get(self.__anecdor_url)
+        webpage = webpage_response.content
+        soup = BeautifulSoup(webpage, 'html.parser')
+        mydivs = soup.findAll('div', class_ = 'anekdot-content')
+        anekdot = re.sub(r'</span><br/><span>', '\n', str(mydivs))
+        anekdot = re.sub(r'[<>[\]abcdefghijklmnopqrstuvwxyz"=/_]', '', anekdot)
+        return anekdot
 
     def greetings(self, group_id):
         weather = self.get_weather()
-        covid_info = self.get_covid()
         greetings = 'Доброе утро, господа!\n\n' \
             '{}\n\n' \
-            'COVID-19 (Россия):\n' \
-            'new: {}\n' \
-            'total: {}\n\n' \
             'Желаю всем удачного дня!\n\n{}' \
-            .format(weather, covid_info[0], 
-                   covid_info[1], str(self.__now)[:-7])
+            .format(weather, str(self.__now)[:-7])
         self.send_message(group_id, greetings)
