@@ -111,13 +111,15 @@ class Bot:
             conn = sqlite3.connect('bot_bd.db')
             c = conn.cursor()
             c.execute('SELECT NUMBER FROM episodes '
-                      'ORDER BY NUMBER DESC LIMIT 1;')
+                'ORDER BY NUMBER DESC LIMIT 1;'
+            )
             last_episode = c.fetchone()[0]
             if last_episode < int(episode_number):
                 last_chat_title = 'Такого эпизода еще не было'
             else:
                 c.execute('SELECT NAME FROM episodes WHERE NUMBER == {};'
-                          .format(episode_number))
+                    .format(episode_number)
+                )
                 last_chat_title = 'Эпизод {}: {}'\
                     .format(episode_number, c.fetchone()[0])
             c.close()

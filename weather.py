@@ -14,11 +14,10 @@ def get_weather():
         "div",
         class_="small-12 medium-6 large-7 columns text-center"
     )
-    regex = re.compile(r'>(.*)<')
-    weather = str(regex.findall(str(mydivs[0])))[2:-2]
+    weather = str(re.findall(r'>(.*)<', str(mydivs[0])))[2:-2]
 
     # get temperature
     mydivs = soup.findAll("div", class_="temperature")
-    regex = re.compile(r'e">(.*)<')
-    temperature = str(regex.findall(repr(mydivs)))[2:-2]
+    temperature = str(re.findall(r'e">(.*)<', str(mydivs)))[2:-2]
+
     return 'Температура за бортом: {}\n{}'.format(temperature, weather)

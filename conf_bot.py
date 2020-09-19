@@ -62,19 +62,33 @@ class ConfBot:
         elif last_chat_text.lower().startswith('/episode '):
             self.__bot.set_chat_title(last_chat_id, last_chat_text[9:])
 
-
     def private_compare(self, last_chat_text, last_update):
         if last_chat_text.startswith('/mail'):
             self.__bot.send_mailing(last_update, 
                 self.__group_id, last_chat_text[6:])
 
-    def greetings(self, group_id):
-        weather_info = weather.get_weather()
-        greetings = 'Доброе утро, господа!\n\n' \
-            '{}\n\n' \
-            'Желаю всем удачного дня!' \
-            .format(weather_info)
-        self.__bot.send_message(group_id, greetings)
+    def greetings(self, today, group_id):
+        now = datetime.datetime.now()
+        hour = now.hour
+        if today == now.day and hour == 8:
+            weather_info = weather.get_weather()
+            greetings = 'Доброе утро, господа!\n\n' \
+                '{}\n\n' \
+                'Желаю всем удачного дня!' \
+                .format(weather_info)
+            self.__bot.send_message(group_id, greetings)
+            today = (datetime.date.today() + datetime.timedelta(days=1)).day
+
+    def get_parameters(self, last_update):
+        last_chat_id = self.__bot.get_chat_id(last_update)
+        last_chat_text = self.__bot.get_chat_text(last_update)
+        last_type = self.__bot.get_type(last_update)
+        return {
+            'id': last_chat_id, 
+            'text': last_chat_text, 
+            'type': last_type
+        }
+
 
     def run(self):
 
@@ -82,34 +96,37 @@ class ConfBot:
         timeout = 60
         now = datetime.datetime.now()
         today = now.day
-        hour = now.hour
         last_update_id = 0
 
         while True:
 
             # Send every day greetings
-            if today == now.day and hour == 10:
-                self.greetings(self.__group_id)
-                today = (datetime.date.today() + datetime.timedelta(days=1)).day
+            self.greetings(today, self.__group_id)
 
-            now = datetime.datetime.now()
             last_update = self.__bot.last_update(new_offset, timeout)
 
             if last_update != 'error':
                 last_update_id = last_update['update_id']
                 try:
                     # Get last update parameters
-                    last_chat_id = self.__bot.get_chat_id(last_update)
-                    last_chat_text = self.__bot.get_chat_text(last_update)
-                    last_type = self.__bot.get_type(last_update)
+                    parameters = self.get_parameters(last_update)
                     # Private or group chat
-                    self.common_compare(last_chat_id, last_chat_text, last_type)
+                    self.common_compare(parameters.get('id'), 
+                        parameters.get('text'), 
+                        parameters.get('type')
+                    )
                     # Private chat
-                    if last_type == 'private':
-                        self.private_compare(last_chat_text, last_update)
+                    if parameters.get('type') == 'private':
+                        self.private_compare(parameters.get('text'), 
+                            last_update
+                        )
                     # Group or supergroup chat
-                    elif last_type == 'group' or last_type == 'supergroup':
-                        self.group_compare(last_chat_id, last_chat_text, last_update)
+                    elif parameters.get('type') == 'group' or \
+                        parameters.get('type') == 'supergroup':
+                        self.group_compare(parameters.get('id'), 
+                            parameters.get('text'), 
+                            last_update
+                        )
                 except KeyError:
                     pass
 
