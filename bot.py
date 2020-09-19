@@ -38,7 +38,7 @@ class Bot:
     def get_chat_name(self, last_update, last_type):
         if last_type == 'private':
             return last_update['message']['chat']['first_name']
-        elif last_type == 'group':
+        elif last_type == 'group' or last_type == 'supergroup':
             return last_update['message']['from']['first_name']
 
     def send_mailing(self, last_update, chat_id, text):
