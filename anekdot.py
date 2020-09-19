@@ -9,6 +9,8 @@ def get_anekdot():
     webpage = webpage_response.content
     soup = BeautifulSoup(webpage, 'html.parser')
     mydivs = soup.findAll('div', class_ = 'anekdot-content')
+    print(str(mydivs))
+    anekdot = re.sub(r'\[<div class="anekdot-content"><p>', '', str(mydivs))
     anekdot = re.sub(r'</span><br/><span>', '\n', str(mydivs))
-    anekdot = re.sub(r'[<>[\]abcdefghijklmnopqrstuvwxyz"=/_]', '', anekdot)
+    anekdot = re.sub(r'</span></p></div>]', '', anekdot)
     return anekdot

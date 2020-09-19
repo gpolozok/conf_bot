@@ -2,7 +2,6 @@ import requests
 import re
 import sqlite3
 from bs4 import BeautifulSoup
-# import datetime
 
 
 class Bot:
@@ -10,7 +9,6 @@ class Bot:
     def __init__(self, token):
         self.__token = token
         self.__api_url = 'https://api.telegram.org/bot{}/'.format(self.__token)
-        # self.__now = datetime.datetime.now()
 
     def get_updates(self, offset=None, timeout=0):
         method = 'getUpdates'
@@ -128,11 +126,3 @@ class Bot:
                 'эпизода. Попытайся еще раз - я верю, у тебя все получится!'
             pass
         return last_chat_title
-
-    # def greetings(self, group_id):
-    #     weather = self.get_weather()
-    #     greetings = 'Доброе утро, господа!\n\n' \
-    #         '{}\n\n' \
-    #         'Желаю всем удачного дня!\n\n{}' \
-    #         .format(weather, str(self.__now)[:-7])
-    #     self.send_message(group_id, greetings)
