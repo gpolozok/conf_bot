@@ -175,7 +175,7 @@ class ConfBot():
             today = (datetime.date.today() + datetime.timedelta(days=1)).day
 
 
-    def run(self):
+    def main(self):
 
         new_offset = None
         timeout = 60
@@ -207,6 +207,6 @@ class ConfBot():
 if __name__ == '__main__':
     confa_bot = ConfBot()
     try:
-        confa_bot.run()
+        confa_bot.main()
     except KeyboardInterrupt:
         exit()
