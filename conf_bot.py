@@ -77,30 +77,38 @@ class ConfBot():
     def new_chat_title(self, **kwargs):
         chat_id = kwargs['chat_id']
         title = kwargs['text']
-        conn = sqlite3.connect('bot_bd.db')
-        c = conn.cursor()
-        c.execute('SELECT NUMBER FROM episodes ORDER BY NUMBER DESC LIMIT 1;')
-        episode_number = c.fetchone()[0]
-        new_title = 'Эпизод {}: {}'.format(episode_number + 1, title)
-        c.execute('INSERT INTO episodes VALUES (\'{}\', \'{}\');'
-                  .format(episode_number + 1, title))
-        conn.commit()
-        conn.close()
-        self.__bot.set_chat_title(chat_id, new_title)
+        if title is None:
+            self.__bot.send_message(chat_id, 'Надо ввести название эпизода')
+        else:
+            conn = sqlite3.connect('bot_bd.db')
+            c = conn.cursor()
+            c.execute('SELECT NUMBER FROM episodes '\
+                'ORDER BY NUMBER DESC LIMIT 1;')
+            episode_number = c.fetchone()[0]
+            new_title = 'Эпизод {}: {}'.format(episode_number + 1, title)
+            c.execute('INSERT INTO episodes VALUES (\'{}\', \'{}\');'
+                    .format(episode_number + 1, title))
+            conn.commit()
+            conn.close()
+            self.__bot.set_chat_title(chat_id, new_title)
 
     def edit_chat_title(self, **kwargs):
         chat_id = kwargs['chat_id']
         title = kwargs['text']
-        conn = sqlite3.connect('bot_bd.db')
-        c = conn.cursor()
-        c.execute('SELECT NUMBER FROM episodes ORDER BY NUMBER DESC LIMIT 1;')
-        episode_number = c.fetchone()[0]
-        c.execute('UPDATE episodes SET NAME="{}" WHERE NUMBER = '
-                '(SELECT MAX(NUMBER) FROM episodes)'.format(title))
-        new_title = 'Эпизод {}: {}'.format(episode_number, title)
-        conn.commit()
-        conn.close()
-        self.__bot.set_chat_title(chat_id, new_title)
+        if title is None:
+            self.__bot.send_message(chat_id, 'Надо ввести новое название')
+        else:
+            conn = sqlite3.connect('bot_bd.db')
+            c = conn.cursor()
+            c.execute('SELECT NUMBER FROM episodes '\
+                'ORDER BY NUMBER DESC LIMIT 1;')
+            episode_number = c.fetchone()[0]
+            c.execute('UPDATE episodes SET NAME="{}" WHERE NUMBER = '
+                    '(SELECT MAX(NUMBER) FROM episodes)'.format(title))
+            new_title = 'Эпизод {}: {}'.format(episode_number, title)
+            conn.commit()
+            conn.close()
+            self.__bot.set_chat_title(chat_id, new_title)
 
     def send_chat_title(self, **kwargs):
         chat_id = kwargs['chat_id']
@@ -151,11 +159,8 @@ class ConfBot():
             triggers.get('episode_num') : self.send_chat_title
         }
 
-        if command_trigger.get(command) is not None:
-            command_trigger.get(command)(
-                chat_id = last_chat_id, 
-                text = text
-            )
+        if (trigger := command_trigger.get(command)) is not None:
+            trigger(chat_id = last_chat_id, text = text)
 
     def greetings(self, today, group_id):
         now = datetime.datetime.now()
