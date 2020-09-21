@@ -14,10 +14,7 @@ def get_weather():
     temperature = mydivs.text
 
     # get weather description
-    mydivs = soup.find(
-        'div',
-        attrs={'class':'small-12 medium-6 large-7 columns text-center'}
-    )
+    mydivs = soup.find('p', attrs={'class':'margin-bottom-0'})
     weather = mydivs.text
 
-    return 'Температура за бортом: {}{}'.format(temperature, weather)
+    return 'Температура за бортом: {}\n{}'.format(temperature, weather)
