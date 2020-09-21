@@ -1,5 +1,4 @@
 import requests
-import re
 from bs4 import BeautifulSoup
 
 weather_url = 'https://www.meteoservice.ru/weather/now/moskva'
