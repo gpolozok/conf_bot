@@ -10,8 +10,8 @@ def get_weather():
     soup = BeautifulSoup(webpage, 'html.parser')
 
     # get temperature
-    mydivs = soup.findAll("div", class_="temperature")
-    temperature = re.findall(r'e">(.*)<', str(mydivs))[0]
+    mydivs = soup.find('span', attrs={'class':'value'})
+    temperature = mydivs.text
 
     # get weather description
     mydivs = soup.find(
