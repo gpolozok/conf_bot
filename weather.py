@@ -17,4 +17,10 @@ def get_weather():
     mydivs = soup.find('p', attrs={'class':'margin-bottom-0'})
     weather = mydivs.text
 
-    return 'Температура за бортом: {}\n{}'.format(temperature, weather)
+    # get atmosphere pressure
+    mydivs = soup.find('div', attrs={'class':'h6 nospace-bottom'})
+    pressure = mydivs.text
+
+    return 'Температура за бортом: {}\n{}\n'\
+        'Атмосферное давление: {}'\
+        .format(temperature, weather, pressure.lstrip())
