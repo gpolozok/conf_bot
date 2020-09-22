@@ -106,8 +106,9 @@ class ConfBot:
             conn = sqlite3.connect('bot_bd.db')
             c = conn.cursor()
             c.execute(
-                'SELECT NUMBER FROM episodes '\
-                'ORDER BY NUMBER DESC LIMIT 1;')
+                'SELECT NUMBER FROM episodes '
+                'ORDER BY NUMBER DESC LIMIT 1;'
+            )
             episode_number = c.fetchone()[0]
             c.execute(
                 'UPDATE episodes SET NAME="{}" WHERE NUMBER = '
