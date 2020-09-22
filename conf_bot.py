@@ -180,14 +180,15 @@ class ConfBot:
             last_update_id = last_update['update_id']
             try:
                 parameters = self.get_parameters(last_update)
-                self.compare(parameters.get('id'), 
+                self.compare(
+                    parameters.get('id'), 
                     parameters.get('text'), 
                     parameters.get('type'),
                     last_update
                 )
             except KeyError:
                 pass
-        return last_update_id + 1
+        return last_update_id
 
 
     def main(self):
@@ -205,7 +206,7 @@ class ConfBot:
             updates = self.__bot.get_updates(new_offset, timeout)
             offsets = pool.map(self.update_handler, updates)
             if offsets:
-                new_offset = max(offsets)
+                new_offset = max(offsets) + 1
 
 
 if __name__ == '__main__':

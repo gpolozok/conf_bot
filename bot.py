@@ -11,7 +11,7 @@ class Bot:
         method = 'getUpdates'
         params = {'offset': offset, 'timeout': timeout}
         response = requests.get(self.__api_url + method, params)
-        return response.json()['result']
+        return response.json().get('result', [])
 
     def last_update(self, offset=None, timeout=0):
         result = self.get_updates(offset, timeout)
