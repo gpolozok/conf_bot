@@ -83,12 +83,16 @@ class ConfBot:
         else:
             conn = sqlite3.connect('bot_bd.db')
             c = conn.cursor()
-            c.execute('SELECT NUMBER FROM episodes '\
-                'ORDER BY NUMBER DESC LIMIT 1;')
+            c.execute(
+                'SELECT NUMBER FROM episodes '
+                'ORDER BY NUMBER DESC LIMIT 1;'
+            )
             episode_number = c.fetchone()[0]
             new_title = 'Эпизод {}: {}'.format(episode_number + 1, title)
-            c.execute('INSERT INTO episodes VALUES (\'{}\', \'{}\');'
-                    .format(episode_number + 1, title))
+            c.execute(
+                'INSERT INTO episodes VALUES (\'{}\', \'{}\');'
+                .format(episode_number + 1, title)
+            )
             conn.commit()
             conn.close()
             self.__bot.set_chat_title(chat_id, new_title)
@@ -101,11 +105,14 @@ class ConfBot:
         else:
             conn = sqlite3.connect('bot_bd.db')
             c = conn.cursor()
-            c.execute('SELECT NUMBER FROM episodes '\
+            c.execute(
+                'SELECT NUMBER FROM episodes '\
                 'ORDER BY NUMBER DESC LIMIT 1;')
             episode_number = c.fetchone()[0]
-            c.execute('UPDATE episodes SET NAME="{}" WHERE NUMBER = '
-                    '(SELECT MAX(NUMBER) FROM episodes)'.format(title))
+            c.execute(
+                'UPDATE episodes SET NAME="{}" WHERE NUMBER = '
+                '(SELECT MAX(NUMBER) FROM episodes)'.format(title)
+            )
             new_title = 'Эпизод {}: {}'.format(episode_number, title)
             conn.commit()
             conn.close()
@@ -121,14 +128,16 @@ class ConfBot:
             else:
                 conn = sqlite3.connect('bot_bd.db')
                 c = conn.cursor()
-                c.execute('SELECT NUMBER FROM episodes '
+                c.execute(
+                    'SELECT NUMBER FROM episodes '
                     'ORDER BY NUMBER DESC LIMIT 1;'
                 )
                 last_episode = c.fetchone()[0]
                 if last_episode < int(episode_number):
                     last_chat_title = 'Такого эпизода еще не было'
                 else:
-                    c.execute('SELECT NAME FROM episodes WHERE NUMBER == {};'
+                    c.execute(
+                        'SELECT NAME FROM episodes WHERE NUMBER == {};'
                         .format(episode_number)
                     )
                     last_chat_title = 'Эпизод {}: {}'\
