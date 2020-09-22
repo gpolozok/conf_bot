@@ -21,5 +21,5 @@ def get_weather():
     pressure = mydivs.text
 
     return 'Температура за бортом: {}\n{}\n'\
-        'Атмосферное давление: {}'\
+        'Атм. давление: {}'\
         .format(temperature, weather, pressure.lstrip())
