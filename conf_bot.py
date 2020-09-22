@@ -173,35 +173,34 @@ class ConfBot:
                 'Желаю всем удачного дня!' \
                 .format(weather_info)
             self.__bot.send_message(group_id, greetings)
-            today = (datetime.date.today() + datetime.timedelta(days=1)).day
+        return (datetime.date.today() + datetime.timedelta(days=1)).day
 
     def update_handler(self, last_update):
-        if last_update is not None:
-            last_update_id = last_update['update_id']
-            try:
-                parameters = self.get_parameters(last_update)
-                self.compare(
-                    parameters.get('id'), 
-                    parameters.get('text'), 
-                    parameters.get('type'),
-                    last_update
-                )
-            except KeyError:
-                pass
+        last_update_id = last_update['update_id']
+        try:
+            parameters = self.get_parameters(last_update)
+            self.compare(
+                parameters.get('id'), 
+                parameters.get('text'), 
+                parameters.get('type'),
+                last_update
+            )
+        except KeyError:
+            pass
         return last_update_id
 
 
     def main(self):
 
         new_offset = None
-        timeout = 60
+        timeout = 5
         now = datetime.datetime.now()
         today = now.day
         pool = ThreadPool(4)
 
         while True:
 
-            self.greetings(today, self.__group_id)
+            today = self.greetings(today, self.__group_id)
 
             updates = self.__bot.get_updates(new_offset, timeout)
             offsets = pool.map(self.update_handler, updates)
