@@ -32,9 +32,21 @@ class ConfBot:
             'episode_num' : '/ep_num'
         }
 
-    def send_mailing(self, text, username):
-        if username == 'grisha1505':
-            self.bot.send_message(self.group_id, text)
+    def greetings(self, today, group_id):
+        now = datetime.datetime.now()
+        hour = now.hour
+        if today == now.day and hour == 8:
+            weather_info = weather.get_weather()
+            greetings = 'Доброе утро, господа!\n\n' \
+                '{}\n' \
+                'Желаю всем удачного дня!' \
+                .format(weather_info)
+            self.bot.send_message(group_id, greetings)
+        return (datetime.date.today() + datetime.timedelta(days=1)).day
+
+    def send_mailing(self, message):
+        if message.username == 'grisha1505':
+            self.bot.send_message(self.group_id, message.text)
 
     def send_help(self, **kwargs):
         chat_id = kwargs['chat_id']
@@ -69,7 +81,7 @@ class ConfBot:
         chat_id = kwargs['chat_id']
         title = kwargs['text']
         if title is None:
-            self.bot.send_message(chat_id, 'Надо ввести название эпизода')
+            self.bot.send_message(chat_id, 'Надо ввести новое название')
         else:
             conn = sqlite3.connect('bot_bd.db')
             c = conn.cursor()
@@ -142,13 +154,14 @@ class ConfBot:
             pass
         self.bot.send_message(chat_id, chat_title)
 
-    def compare(self, chat_id, chat_type, username, command, text):
-        if chat_type == 'private' and command.startswith('/mail '):
-            self.send_mailing(text, username)
-        elif chat_type == 'group' or chat_type == 'supergroup':
-            self.command_handler(chat_id, command, text) 
+    def compare(self, message):
+        if message.chat_type == 'private' \
+            and message.command.startswith('/mail '):
+            self.send_mailing(message)
+        elif message.chat_type in ['group', 'supergroup']:
+            self.command_handler(message) 
 
-    def command_handler(self, chat_id, command, text):
+    def command_handler(self, message):
         triggers = self.triggers
         command_trigger = {
             triggers.get('help') : self.send_help,
@@ -160,32 +173,11 @@ class ConfBot:
             triggers.get('episode_num') : self.get_chat_title
         }
 
-        if (trigger := command_trigger.get(command)) is not None:
-            trigger(chat_id = chat_id, text = text)
-
-    def greetings(self, today, group_id):
-        now = datetime.datetime.now()
-        hour = now.hour
-        if today == now.day and hour == 8:
-            weather_info = weather.get_weather()
-            greetings = 'Доброе утро, господа!\n\n' \
-                '{}\n' \
-                'Желаю всем удачного дня!' \
-                .format(weather_info)
-            self.bot.send_message(group_id, greetings)
-        return (datetime.date.today() + datetime.timedelta(days=1)).day
+        if (trigger := command_trigger.get(message.command)) is not None:
+            trigger(chat_id = message.chat_id, text = message.text)
 
     def update_handler(self, message):
-        try:
-            self.compare(
-                message.chat_id,
-                message.chat_type,
-                message.username,
-                message.command,
-                message.text,
-            )
-        except KeyError:
-            pass
+        self.compare(message)
         return message.update_id
 
 
