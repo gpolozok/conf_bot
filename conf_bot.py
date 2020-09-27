@@ -155,8 +155,7 @@ class ConfBot:
         await self.bot.send_message(chat_id, chat_title)
 
     async def compare(self, message):
-        if message.chat_type == 'private' \
-            and message.command.startswith('/mail '):
+        if message.chat_type == 'private' and message.command == '/mail':
             await self.send_mailing(message)
         elif message.chat_type in ['group', 'supergroup']:
             await self.command_handler(message)
