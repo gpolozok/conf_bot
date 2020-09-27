@@ -1,13 +1,13 @@
 import json
-import requests
 import datetime
+import asyncio
+import aiohttp
 import sqlite3
 import weather
 import covid
 import anekdot
 from bot import Bot
 from message import Message
-from multiprocessing.dummy import Pool as ThreadPool
 
 class ConfBot:
 
@@ -32,7 +32,7 @@ class ConfBot:
             'episode_num' : '/ep_num'
         }
 
-    def greetings(self, today, group_id):
+    async def greetings(self, today, group_id):
         now = datetime.datetime.now()
         hour = now.hour
         if today == now.day and hour == 8:
@@ -41,14 +41,14 @@ class ConfBot:
                 '{}\n' \
                 'Желаю всем удачного дня!' \
                 .format(weather_info)
-            self.bot.send_message(group_id, greetings)
+            await self.bot.send_message(group_id, greetings)
         return (datetime.date.today() + datetime.timedelta(days=1)).day
 
-    def send_mailing(self, message):
+    async def send_mailing(self, message):
         if message.username == 'grisha1505':
-            self.bot.send_message(self.group_id, message.text)
+            await self.bot.send_message(self.group_id, message.text)
 
-    def send_help(self, **kwargs):
+    async def send_help(self, **kwargs):
         chat_id = kwargs['chat_id']
         bot_help = '1. /ep <Название эпизода>\n' \
             'Установить новый эпизод, пишите только название\n\n' \
@@ -63,25 +63,25 @@ class ConfBot:
             '6. /covid{n}\n' \
             'Показать статистику по COVID-19 в России' \
             .format(n=self.bot_name)
-        self.bot.send_message(chat_id, bot_help)
+        await self.bot.send_message(chat_id, bot_help)
 
-    def send_weather(self, **kwargs):
+    async def send_weather(self, **kwargs):
         chat_id = kwargs['chat_id']
-        self.bot.send_message(chat_id, weather.get_weather())
+        await self.bot.send_message(chat_id, await weather.get_weather())
 
-    def send_covid(self, **kwargs):
+    async def send_covid(self, **kwargs):
         chat_id = kwargs['chat_id']
-        self.bot.send_message(chat_id, covid.get_covid())
+        await self.bot.send_message(chat_id, await covid.get_covid())
 
-    def send_anekdot(self, **kwargs):
+    async def send_anekdot(self, **kwargs):
         chat_id = kwargs['chat_id']
-        self.bot.send_message(chat_id, anekdot.get_anekdot())
+        await self.bot.send_message(chat_id, await anekdot.get_anekdot())
 
-    def new_chat_title(self, **kwargs):
+    async def new_chat_title(self, **kwargs):
         chat_id = kwargs['chat_id']
         title = kwargs['text']
         if title is None:
-            self.bot.send_message(chat_id, 'Надо ввести новое название')
+            await self.bot.send_message(chat_id, 'Надо ввести новое название')
         else:
             conn = sqlite3.connect('bot_bd.db')
             c = conn.cursor()
@@ -97,13 +97,13 @@ class ConfBot:
             )
             conn.commit()
             conn.close()
-            self.bot.set_chat_title(chat_id, new_title)
+            await self.bot.set_chat_title(chat_id, new_title)
 
-    def edit_chat_title(self, **kwargs):
+    async def edit_chat_title(self, **kwargs):
         chat_id = kwargs['chat_id']
         title = kwargs['text']
         if title is None:
-            self.bot.send_message(chat_id, 'Надо ввести новое название')
+            await self.bot.send_message(chat_id, 'Надо ввести новое название')
         else:
             conn = sqlite3.connect('bot_bd.db')
             c = conn.cursor()
@@ -119,9 +119,9 @@ class ConfBot:
             new_title = 'Эпизод {}: {}'.format(episode_number, title)
             conn.commit()
             conn.close()
-            self.bot.set_chat_title(chat_id, new_title)
+            await self.bot.set_chat_title(chat_id, new_title)
 
-    def get_chat_title(self, **kwargs):
+    async def get_chat_title(self, **kwargs):
         chat_id = kwargs['chat_id']
         episode_number = kwargs['text']
         try:
@@ -152,16 +152,16 @@ class ConfBot:
             chat_title = 'Хорошая попытка, но надо ввести номер ' \
                 'эпизода. Попытайся еще раз - я верю, у тебя все получится!'
             pass
-        self.bot.send_message(chat_id, chat_title)
+        await self.bot.send_message(chat_id, chat_title)
 
-    def compare(self, message):
+    async def compare(self, message):
         if message.chat_type == 'private' \
             and message.command.startswith('/mail '):
-            self.send_mailing(message)
+            await self.send_mailing(message)
         elif message.chat_type in ['group', 'supergroup']:
-            self.command_handler(message) 
+            await self.command_handler(message) 
 
-    def command_handler(self, message):
+    async def command_handler(self, message):
         triggers = self.triggers
         command_trigger = {
             triggers.get('help') : self.send_help,
@@ -174,36 +174,34 @@ class ConfBot:
         }
 
         if (trigger := command_trigger.get(message.command)) is not None:
-            trigger(chat_id = message.chat_id, text = message.text)
+            await trigger(chat_id = message.chat_id, text = message.text)
 
-    def update_handler(self, message):
-        self.compare(message)
+    async def update_handler(self, queue):
+        while queue.empty() is False:
+            message = await queue.get()
+            await self.compare(message)
         return message.update_id
 
 
-    def main(self):
+    async def main(self):
 
-        new_offset = None
+        new_offset = 0
         timeout = 60
+        queue = asyncio.Queue()
         now = datetime.datetime.now()
         today = now.day
-        pool = ThreadPool(4)
 
         while True:
 
-            today = self.greetings(today, self.group_id)
+            today = await self.greetings(today, self.group_id)
 
-            offsets = pool.map(
-                self.update_handler, 
-                self.bot.get_updates(new_offset, timeout)
-            )
-            if offsets:
-                new_offset = max(offsets) + 1
-
+            await self.bot.get_updates(queue, new_offset, timeout)
+            if queue.empty() is False:
+                new_offset = await self.update_handler(queue) + 1
 
 if __name__ == '__main__':
     confabot = ConfBot()
     try:
-        confabot.main()
+        asyncio.run(confabot.main())
     except KeyboardInterrupt:
         exit()

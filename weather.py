@@ -1,11 +1,14 @@
-import requests
+import asyncio
+import aiohttp
 from bs4 import BeautifulSoup
 
 weather_url = 'https://www.meteoservice.ru/weather/now/moskva'
 
-def get_weather():
-    webpage_response = requests.get(weather_url)
-    webpage = webpage_response.content
+async def get_weather():
+    async with aiohttp.ClientSession() as session:
+        async with session.get(weather_url) as webpage_response:
+            webpage = await webpage_response.read()
+
     soup = BeautifulSoup(webpage, 'html.parser')
 
     # get temperature

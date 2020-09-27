@@ -1,10 +1,13 @@
-import requests
+import asyncio
+import aiohttp
 
 covid_url = 'https://api.covid19api.com/summary'
 
-def get_covid():
-    response = requests.get(covid_url)
-    russia_info = response.json()['Countries'][139]
+async def get_covid():
+    async with aiohttp.ClientSession() as session:
+        async with session.get(covid_url) as resp:
+            response = await resp.json()
+    russia_info = response['Countries'][139]
     covid_text = 'Коронавирус в России:\n\n' \
         'Новые случаи: {NewConfirmed}\n' \
         'Всего случаев: {TotalConfirmed}\n\n' \

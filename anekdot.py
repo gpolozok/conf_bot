@@ -1,11 +1,14 @@
-import requests
+import asyncio
+import aiohttp
 from bs4 import BeautifulSoup
 
-anecdot_url = 'https://anekdot-z.ru/random-anekdot'
+anekdot_url = 'https://anekdot-z.ru/random-anekdot'
 
-def get_anekdot():
-    webpage_response = requests.get(anecdot_url)
-    webpage = webpage_response.content
+async def get_anekdot():
+    async with aiohttp.ClientSession() as session:
+        async with session.get(anekdot_url) as webpage_response:
+            webpage = await webpage_response.read()
+
     soup = BeautifulSoup(webpage, 'html.parser')
     mydivs = soup.find('div', attrs={'class':'anekdot-content'})
     anekdot = mydivs.text
