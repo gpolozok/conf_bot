@@ -35,8 +35,8 @@ class ConfBot:
     async def greetings(self, today, group_id):
         now = datetime.datetime.now()
         hour = now.hour
-        if today == now.day and hour == 8:
-            weather_info = weather.get_weather()
+        if today == now.day and hour == 16:
+            weather_info = await weather.get_weather()
             greetings = 'Доброе утро, господа!\n\n' \
                 '{}\n' \
                 'Желаю всем удачного дня!' \
