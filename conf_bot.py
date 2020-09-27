@@ -42,7 +42,9 @@ class ConfBot:
                 'Желаю всем удачного дня!' \
                 .format(weather_info)
             self.bot.send_message(group_id, greetings)
-        return (datetime.date.today() + datetime.timedelta(days=1)).day
+            return (datetime.date.today() + datetime.timedelta(days=1)).day
+        else:
+            return today
 
     def send_mailing(self, message):
         if message.username == 'grisha1505':
