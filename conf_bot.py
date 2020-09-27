@@ -35,14 +35,16 @@ class ConfBot:
     async def greetings(self, today, group_id):
         now = datetime.datetime.now()
         hour = now.hour
-        if today == now.day and hour == 16:
+        if today == now.day and hour == 8:
             weather_info = await weather.get_weather()
             greetings = 'Доброе утро, господа!\n\n' \
                 '{}\n' \
                 'Желаю всем удачного дня!' \
                 .format(weather_info)
             await self.bot.send_message(group_id, greetings)
-        return (datetime.date.today() + datetime.timedelta(days=1)).day
+            return (datetime.date.today() + datetime.timedelta(days=1)).day
+        else:
+            return today
 
     async def send_mailing(self, message):
         if message.username == 'grisha1505':
@@ -194,6 +196,7 @@ class ConfBot:
         while True:
 
             today = await self.greetings(today, self.group_id)
+            print(today)
 
             await self.bot.get_updates(queue, new_offset, timeout)
             if queue.empty() is False:
