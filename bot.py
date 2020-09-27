@@ -18,9 +18,8 @@ class Bot:
             ) as resp:
                 response = await resp.json()
         updates = response.get('result', [])
-        if updates:
-            for update in updates:
-                await queue.put(Message(update))
+        for update in updates:
+            await queue.put(Message(update))
 
     async def send_message(self, chat_id, text, reply_id=None):
         params = {

@@ -180,12 +180,13 @@ class ConfBot:
         while queue.empty() is False:
             message = await queue.get()
             await self.compare(message)
-        return message.update_id
+            queue.task_done()
+            return message.update_id
 
     async def main(self):
 
         new_offset = 0
-        timeout = 60
+        timeout = 5
         queue = asyncio.Queue()
         now = datetime.datetime.now()
         greetings_day = now.day
@@ -195,8 +196,23 @@ class ConfBot:
             greetings_day = await self.greetings(greetings_day, self.group_id)
 
             await self.bot.get_updates(queue, new_offset, timeout)
-            if queue.empty() is False:
-                new_offset = await self.update_handler(queue) + 1
+
+            tasks = []
+            for i in range(5):
+                task = asyncio.create_task(self.update_handler(queue))
+                tasks.append(task)
+
+            await queue.join()
+
+            for task in tasks:
+                try:
+                    if task.result() is not None:
+                        new_offset = task.result() + 1
+                except asyncio.exceptions.InvalidStateError:
+                    pass
+                task.cancel()
+
+            await asyncio.gather(*tasks, return_exceptions=True)
 
 
 if __name__ == '__main__':
