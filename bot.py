@@ -1,6 +1,6 @@
 import requests
 from message import Message
-from bs4 import BeautifulSoup
+
 
 class Bot:
 

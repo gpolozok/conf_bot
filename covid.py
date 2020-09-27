@@ -2,6 +2,7 @@ import requests
 
 covid_url = 'https://api.covid19api.com/summary'
 
+
 def get_covid():
     response = requests.get(covid_url)
     russia_info = response.json()['Countries'][139]
@@ -12,5 +13,5 @@ def get_covid():
         'Всего излечившихся: {TotalRecovered}\n\n' \
         'Новые погибшие: {NewDeaths}\n' \
         'Всего погибших: {TotalDeaths}' \
-        .format(**russia_info)   
+        .format(**russia_info)
     return covid_text

@@ -1,13 +1,12 @@
 import json
-import requests
 import datetime
 import sqlite3
 import weather
 import covid
 import anekdot
 from bot import Bot
-from message import Message
 from multiprocessing.dummy import Pool as ThreadPool
+
 
 class ConfBot:
 
@@ -23,19 +22,18 @@ class ConfBot:
     @property
     def triggers(self):
         return {
-            'help' : '/help{}'.format(self.bot_name),
-            'weather' : '/weather{}'.format(self.bot_name),
-            'covid' : '/covid{}'.format(self.bot_name),
-            'anekdot' : '/anekdot{}'.format(self.bot_name),
-            'episode' : '/ep',
-            'episode_edit' : '/ep_edit',
-            'episode_num' : '/ep_num'
+            'help': '/help{}'.format(self.bot_name),
+            'weather': '/weather{}'.format(self.bot_name),
+            'covid': '/covid{}'.format(self.bot_name),
+            'anekdot': '/anekdot{}'.format(self.bot_name),
+            'episode': '/ep',
+            'episode_edit': '/ep_edit',
+            'episode_num': '/ep_num'
         }
 
     def greetings(self, today, group_id):
         now = datetime.datetime.now()
-        hour = now.hour
-        if today == now.day and hour == 8:
+        if today == now.day and now.hour == 8:
             weather_info = weather.get_weather()
             greetings = 'Доброе утро, господа!\n\n' \
                 '{}\n' \
@@ -157,46 +155,44 @@ class ConfBot:
         self.bot.send_message(chat_id, chat_title)
 
     def compare(self, message):
-        if message.chat_type == 'private' \
-            and message.command.startswith('/mail '):
+        if message.chat_type == 'private' and message.command == '/mail':
             self.send_mailing(message)
         elif message.chat_type in ['group', 'supergroup']:
-            self.command_handler(message) 
+            self.command_handler(message)
 
     def command_handler(self, message):
         triggers = self.triggers
         command_trigger = {
-            triggers.get('help') : self.send_help,
-            triggers.get('weather') : self.send_weather,
-            triggers.get('covid') : self.send_covid,
-            triggers.get('anekdot') : self.send_anekdot,
-            triggers.get('episode') : self.new_chat_title,
-            triggers.get('episode_edit') : self.edit_chat_title,
-            triggers.get('episode_num') : self.get_chat_title
+            triggers.get('help'): self.send_help,
+            triggers.get('weather'): self.send_weather,
+            triggers.get('covid'): self.send_covid,
+            triggers.get('anekdot'): self.send_anekdot,
+            triggers.get('episode'): self.new_chat_title,
+            triggers.get('episode_edit'): self.edit_chat_title,
+            triggers.get('episode_num'): self.get_chat_title
         }
 
         if (trigger := command_trigger.get(message.command)) is not None:
-            trigger(chat_id = message.chat_id, text = message.text)
+            trigger(chat_id=message.chat_id, text=message.text)
 
     def update_handler(self, message):
         self.compare(message)
         return message.update_id
-
 
     def main(self):
 
         new_offset = None
         timeout = 60
         now = datetime.datetime.now()
-        today = now.day
+        greetings_day = now.day
         pool = ThreadPool(4)
 
         while True:
 
-            today = self.greetings(today, self.group_id)
+            greetings_day = self.greetings(greetings_day, self.group_id)
 
             offsets = pool.map(
-                self.update_handler, 
+                self.update_handler,
                 self.bot.get_updates(new_offset, timeout)
             )
             if offsets:
