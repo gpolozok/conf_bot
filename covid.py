@@ -1,7 +1,7 @@
-import asyncio
 import aiohttp
 
 covid_url = 'https://api.covid19api.com/summary'
+
 
 async def get_covid():
     async with aiohttp.ClientSession() as session:
@@ -15,5 +15,5 @@ async def get_covid():
         'Всего излечившихся: {TotalRecovered}\n\n' \
         'Новые погибшие: {NewDeaths}\n' \
         'Всего погибших: {TotalDeaths}' \
-        .format(**russia_info)   
+        .format(**russia_info)
     return covid_text

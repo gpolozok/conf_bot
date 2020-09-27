@@ -1,7 +1,6 @@
-import asyncio
 import aiohttp
 from message import Message
-from bs4 import BeautifulSoup
+
 
 class Bot:
 
@@ -14,7 +13,7 @@ class Bot:
         params = {'offset': offset, 'timeout': timeout}
         async with aiohttp.ClientSession() as session:
             async with session.get(
-                self._api_url + method, 
+                self._api_url + method,
                 params=params
             ) as resp:
                 response = await resp.json()

@@ -1,13 +1,12 @@
 import json
 import datetime
 import asyncio
-import aiohttp
 import sqlite3
 import weather
 import covid
 import anekdot
 from bot import Bot
-from message import Message
+
 
 class ConfBot:
 
@@ -23,19 +22,18 @@ class ConfBot:
     @property
     def triggers(self):
         return {
-            'help' : '/help{}'.format(self.bot_name),
-            'weather' : '/weather{}'.format(self.bot_name),
-            'covid' : '/covid{}'.format(self.bot_name),
-            'anekdot' : '/anekdot{}'.format(self.bot_name),
-            'episode' : '/ep',
-            'episode_edit' : '/ep_edit',
-            'episode_num' : '/ep_num'
+            'help': '/help{}'.format(self.bot_name),
+            'weather': '/weather{}'.format(self.bot_name),
+            'covid': '/covid{}'.format(self.bot_name),
+            'anekdot': '/anekdot{}'.format(self.bot_name),
+            'episode': '/ep',
+            'episode_edit': '/ep_edit',
+            'episode_num': '/ep_num'
         }
 
     async def greetings(self, today, group_id):
         now = datetime.datetime.now()
-        hour = now.hour
-        if today == now.day and hour == 8:
+        if today == now.day and now.hour == 8:
             weather_info = await weather.get_weather()
             greetings = 'Доброе утро, господа!\n\n' \
                 '{}\n' \
@@ -161,22 +159,22 @@ class ConfBot:
             and message.command.startswith('/mail '):
             await self.send_mailing(message)
         elif message.chat_type in ['group', 'supergroup']:
-            await self.command_handler(message) 
+            await self.command_handler(message)
 
     async def command_handler(self, message):
         triggers = self.triggers
         command_trigger = {
-            triggers.get('help') : self.send_help,
-            triggers.get('weather') : self.send_weather,
-            triggers.get('covid') : self.send_covid,
-            triggers.get('anekdot') : self.send_anekdot,
-            triggers.get('episode') : self.new_chat_title,
-            triggers.get('episode_edit') : self.edit_chat_title,
-            triggers.get('episode_num') : self.get_chat_title
+            triggers.get('help'): self.send_help,
+            triggers.get('weather'): self.send_weather,
+            triggers.get('covid'): self.send_covid,
+            triggers.get('anekdot'): self.send_anekdot,
+            triggers.get('episode'): self.new_chat_title,
+            triggers.get('episode_edit'): self.edit_chat_title,
+            triggers.get('episode_num'): self.get_chat_title
         }
 
         if (trigger := command_trigger.get(message.command)) is not None:
-            await trigger(chat_id = message.chat_id, text = message.text)
+            await trigger(chat_id=message.chat_id, text=message.text)
 
     async def update_handler(self, queue):
         while queue.empty() is False:
@@ -184,23 +182,22 @@ class ConfBot:
             await self.compare(message)
         return message.update_id
 
-
     async def main(self):
 
         new_offset = 0
         timeout = 60
         queue = asyncio.Queue()
         now = datetime.datetime.now()
-        today = now.day
+        greetings_day = now.day
 
         while True:
 
-            today = await self.greetings(today, self.group_id)
-            print(today)
+            greetings_day = await self.greetings(greetings_day, self.group_id)
 
             await self.bot.get_updates(queue, new_offset, timeout)
             if queue.empty() is False:
                 new_offset = await self.update_handler(queue) + 1
+
 
 if __name__ == '__main__':
     confabot = ConfBot()
