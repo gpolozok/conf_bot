@@ -187,7 +187,7 @@ class ConfBot:
 
     def main(self):
 
-        timeout = 5
+        timeout = 60
         queue = asyncio.Queue()
 
         loop = asyncio.get_event_loop()
