@@ -18,6 +18,7 @@ class ConfBot:
         self.supergroup_id = config['supergroup_id']
         self.my_id = config['my_id']
         self.bot = Bot(config['token'])
+        self.workers_amount = config['workers_amount']
 
     @property
     def triggers(self):
@@ -179,7 +180,7 @@ class ConfBot:
         if (trigger := command_trigger.get(message.command)) is not None:
             await trigger(chat_id=message.chat_id, text=message.text)
 
-    async def update_handler(self, queue: asyncio.Queue):
+    async def update_handler(self, queue):
         while True:
             message = await queue.get()
             await self.compare(message)
@@ -191,10 +192,9 @@ class ConfBot:
 
         loop = asyncio.get_event_loop()
         loop.create_task(self.greetings())
-        loop.create_task(self.update_handler(queue=queue))
-        loop.create_task(self.update_handler(queue=queue))
-        loop.create_task(self.update_handler(queue=queue))
         loop.create_task(self.bot.get_updates(queue, timeout))
+        for i in range(self.workers_amount):
+            loop.create_task(self.update_handler(queue))
         loop.run_forever()
 
 
