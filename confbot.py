@@ -199,9 +199,9 @@ class ConfBot:
 
 
 if __name__ == '__main__':
-    confabot = ConfBot()
+    confbot = ConfBot()
 
     try:
-        confabot.main()
+        confbot.main()
     except Exception:
         print('Fail')
