@@ -193,7 +193,7 @@ class ConfBot:
         loop = asyncio.get_event_loop()
         loop.create_task(self.greetings())
         loop.create_task(self.bot.get_updates(queue, timeout))
-        for i in range(self.workers_amount):
+        for _ in range(self.workers_amount):
             loop.create_task(self.update_handler(queue))
         loop.run_forever()
 
