@@ -1,5 +1,5 @@
-import json
 import datetime
+import json
 import asyncio
 import sqlite3
 import weather
@@ -31,18 +31,22 @@ class ConfBot:
             'episode_num': '/ep_num'
         }
 
-    async def greetings(self, today, group_id):
+    async def greetings(self):
         now = datetime.datetime.now()
-        if today == now.day and now.hour == 8:
-            weather_info = await weather.get_weather()
-            greetings = 'Доброе утро, господа!\n\n' \
-                '{}\n' \
-                'Желаю всем удачного дня!' \
-                .format(weather_info)
-            await self.bot.send_message(group_id, greetings)
-            return (datetime.date.today() + datetime.timedelta(days=1)).day
-        else:
-            return today
+        today = now.day
+        while True:
+            await asyncio.sleep(900)
+            if today == now.day and now.hour == 8:
+                weather_info = await weather.get_weather()
+                greetings = 'Доброе утро, господа!\n\n' \
+                    '{}\n' \
+                    'Желаю всем удачного дня!' \
+                    .format(weather_info)
+                await self.bot.send_message(self.group_id, greetings)
+                today = (datetime.date.today() + datetime.timedelta(days=1)) \
+                    .day
+            else:
+                print(today)
 
     async def send_mailing(self, message):
         if message.username == 'grisha1505':
@@ -175,48 +179,29 @@ class ConfBot:
         if (trigger := command_trigger.get(message.command)) is not None:
             await trigger(chat_id=message.chat_id, text=message.text)
 
-    async def update_handler(self, queue):
-        while queue.empty() is False:
+    async def update_handler(self, queue: asyncio.Queue):
+        while True:
             message = await queue.get()
             await self.compare(message)
-            queue.task_done()
-            return message.update_id
 
-    async def main(self):
+    def main(self):
 
-        new_offset = 0
         timeout = 5
         queue = asyncio.Queue()
-        now = datetime.datetime.now()
-        greetings_day = now.day
 
-        while True:
-
-            greetings_day = await self.greetings(greetings_day, self.group_id)
-
-            await self.bot.get_updates(queue, new_offset, timeout)
-
-            tasks = []
-            for i in range(5):
-                task = asyncio.create_task(self.update_handler(queue))
-                tasks.append(task)
-
-            await queue.join()
-
-            for task in tasks:
-                try:
-                    if task.result() is not None:
-                        new_offset = task.result() + 1
-                except asyncio.exceptions.InvalidStateError:
-                    pass
-                task.cancel()
-
-            await asyncio.gather(*tasks, return_exceptions=True)
+        loop = asyncio.get_event_loop()
+        loop.create_task(self.greetings())
+        loop.create_task(self.update_handler(queue=queue))
+        loop.create_task(self.update_handler(queue=queue))
+        loop.create_task(self.update_handler(queue=queue))
+        loop.create_task(self.bot.get_updates(queue, timeout))
+        loop.run_forever()
 
 
 if __name__ == '__main__':
     confabot = ConfBot()
+
     try:
-        asyncio.run(confabot.main())
-    except KeyboardInterrupt:
-        exit()
+        confabot.main()
+    except Exception:
+        print('Fail')
