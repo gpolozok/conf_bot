@@ -36,7 +36,8 @@ class ConfBot:
         now = datetime.datetime.now()
         today = now.day
         while True:
-            await asyncio.sleep(900)
+            await asyncio.sleep(1200)
+            now = datetime.datetime.now()
             if today == now.day and now.hour == 8:
                 weather_info = await weather.get_weather()
                 greetings = 'Доброе утро, господа!\n\n' \
@@ -46,8 +47,6 @@ class ConfBot:
                 await self.bot.send_message(self.group_id, greetings)
                 today = (datetime.date.today() + datetime.timedelta(days=1)) \
                     .day
-            else:
-                print(today)
 
     async def send_mailing(self, message):
         if message.username == 'grisha1505':
