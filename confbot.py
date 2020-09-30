@@ -1,7 +1,7 @@
 import datetime
 import json
 import asyncio
-import sqlite3
+import asyncpg
 import weather
 import covid
 import anekdot
@@ -19,6 +19,11 @@ class ConfBot:
         self.my_id = config['my_id']
         self.bot = Bot(config['token'])
         self.workers_amount = config['workers_amount']
+        self.db_name = config['db_name']
+        self.db_host = config['db_host']
+        self.db_port = config['db_port']
+        self.db_user = config['db_user']
+        self.db_pass = config['db_pass']
 
     @property
     def triggers(self):
@@ -87,20 +92,24 @@ class ConfBot:
         if title is None:
             await self.bot.send_message(chat_id, 'Надо ввести новое название')
         else:
-            conn = sqlite3.connect('bot_bd.db')
-            c = conn.cursor()
-            c.execute(
-                'SELECT NUMBER FROM episodes '
-                'ORDER BY NUMBER DESC LIMIT 1;'
+            conn = await asyncpg.connect(
+                host=self.db_host,
+                port=self.db_port,
+                user=self.db_user,
+                password=self.db_pass,
+                database=self.db_name
             )
-            episode_number = c.fetchone()[0]
+            episode_number = (await conn.fetchrow(
+                'SELECT episode_num FROM confbot.episodes WHERE id = '
+                '(SELECT MAX(id) FROM confbot.episodes)'
+            ))[0]
             new_title = 'Эпизод {}: {}'.format(episode_number + 1, title)
-            c.execute(
-                'INSERT INTO episodes VALUES (\'{}\', \'{}\');'
+            await conn.execute(
+                'INSERT INTO confbot.episodes (episode_num, title) '
+                'VALUES ({}, \'{}\');'
                 .format(episode_number + 1, title)
             )
-            conn.commit()
-            conn.close()
+            await conn.close()
             await self.bot.set_chat_title(chat_id, new_title)
 
     async def edit_chat_title(self, **kwargs):
@@ -109,20 +118,24 @@ class ConfBot:
         if title is None:
             await self.bot.send_message(chat_id, 'Надо ввести новое название')
         else:
-            conn = sqlite3.connect('bot_bd.db')
-            c = conn.cursor()
-            c.execute(
-                'SELECT NUMBER FROM episodes '
-                'ORDER BY NUMBER DESC LIMIT 1;'
+            conn = await asyncpg.connect(
+                host=self.db_host,
+                port=self.db_port,
+                user=self.db_user,
+                password=self.db_pass,
+                database=self.db_name
             )
-            episode_number = c.fetchone()[0]
-            c.execute(
-                'UPDATE episodes SET NAME="{}" WHERE NUMBER = '
-                '(SELECT MAX(NUMBER) FROM episodes)'.format(title)
+            episode_number = (await conn.fetchrow(
+                'SELECT episode_num FROM confbot.episodes '
+                'WHERE id = (SELECT MAX(id) FROM confbot.episodes)'
+            ))[0]
+            await conn.execute(
+                'UPDATE confbot.episodes '
+                'SET title=\'{}\' WHERE episode_num={}'
+                .format(title, episode_number)
             )
             new_title = 'Эпизод {}: {}'.format(episode_number, title)
-            conn.commit()
-            conn.close()
+            await conn.close()
             await self.bot.set_chat_title(chat_id, new_title)
 
     async def get_chat_title(self, **kwargs):
@@ -131,27 +144,31 @@ class ConfBot:
         try:
             if episode_number is None:
                 chat_title = 'Надо ввести номер эпизода'
-            elif int(episode_number) <= 61:
-                chat_title = 'Я знаю историю только с '\
-                    '62 эпизода, сорян :('
+            elif int(episode_number) < 47:
+                chat_title = 'Я знаю историю только с 47 эпизода, сорян :('
             else:
-                conn = sqlite3.connect('bot_bd.db')
-                c = conn.cursor()
-                c.execute(
-                    'SELECT NUMBER FROM episodes '
-                    'ORDER BY NUMBER DESC LIMIT 1;'
+                conn = await asyncpg.connect(
+                    host=self.db_host,
+                    port=self.db_port,
+                    user=self.db_user,
+                    password=self.db_pass,
+                    database=self.db_name
                 )
-                episode = c.fetchone()[0]
-                if episode < int(episode_number):
+                episode = (await conn.fetchrow(
+                    'SELECT episode_num FROM confbot.episodes WHERE id = '
+                    '(SELECT MAX(id) FROM confbot.episodes)'
+                ))[0]
+                if int(episode_number) > episode:
                     chat_title = 'Такого эпизода еще не было'
                 else:
-                    c.execute(
-                        'SELECT NAME FROM episodes WHERE NUMBER == {};'
-                        .format(episode_number)
-                    )
+                    title = (await conn.fetchrow(
+                        'SELECT title FROM confbot.episodes '
+                        'WHERE episode_num = {};'
+                        .format(int(episode_number))
+                    ))[0]
                     chat_title = 'Эпизод {}: {}'\
-                        .format(episode_number, c.fetchone()[0])
-                c.close()
+                        .format(episode_number, title)
+                await conn.close()
         except ValueError:
             chat_title = 'Хорошая попытка, но надо ввести номер ' \
                 'эпизода. Попытайся еще раз - я верю, у тебя все получится!'
