@@ -5,6 +5,7 @@ import asyncpg
 import weather
 import covid
 import anekdot
+from person import Person
 from bot import Bot
 
 
@@ -40,18 +41,59 @@ class ConfBot:
     async def greetings(self):
         now = datetime.datetime.now()
         today = now.day
+        person_list = await self.initialize()
         while True:
             await asyncio.sleep(1200)
             now = datetime.datetime.now()
-            if today == now.day and now.hour == 8:
-                weather_info = await weather.get_weather()
+            greetings = None
+            for person in person_list:
+                if now.day == (person.birthdate).day and \
+                    now.month == (person.birthdate).month:
+                    greetings = 'Доброе утро, господа!\n\n' \
+                        'Cегодня особенный день - наш добрый друг {} ' \
+                        'отмечает свой День Рождения!\n\n' \
+                        '{}, бот поздравляет тебя и желает ' \
+                        'счастья, любви и процветания!\n\n{}' \
+                        .format(
+                            person.name,
+                            person.username,
+                            await weather.get_weather()
+                        )
+            if greetings is None:
                 greetings = 'Доброе утро, господа!\n\n' \
                     '{}\n' \
                     'Желаю всем удачного дня!' \
-                    .format(weather_info)
+                    .format(await weather.get_weather())
+            if today == now.day and now.hour == 8:
                 await self.bot.send_message(self.group_id, greetings)
                 today = (datetime.date.today() + datetime.timedelta(days=1)) \
                     .day
+
+    async def initialize(self):
+        person_list = []
+        conn = await asyncpg.connect(
+            host=self.db_host,
+            port=self.db_port,
+            user=self.db_user,
+            password=self.db_pass,
+            database=self.db_name
+        )
+        rows = (await conn.fetch('SELECT id FROM confbot.persons'))
+        for i in rows:
+            person_info = await conn.fetchrow(
+                'SELECT * FROM confbot.persons WHERE id = {}'.format(i['id'])
+            )
+            person = Person(
+                person_info['user_id'],
+                person_info['firstname'],
+                person_info['username'],
+                person_info['birthdate'],
+                person_info['companion'],
+                person_info['compbirthdate']
+            )
+            person_list.append(person)
+        await conn.close()
+        return person_list
 
     async def send_mailing(self, message):
         if message.username == 'grisha1505':
@@ -175,12 +217,6 @@ class ConfBot:
             pass
         await self.bot.send_message(chat_id, chat_title)
 
-    async def compare(self, message):
-        if message.chat_type == 'private' and message.command == '/mail':
-            await self.send_mailing(message)
-        elif message.chat_type in ['group', 'supergroup']:
-            await self.command_handler(message)
-
     async def command_handler(self, message):
         triggers = self.triggers
         command_trigger = {
@@ -192,9 +228,14 @@ class ConfBot:
             triggers.get('episode_edit'): self.edit_chat_title,
             triggers.get('episode_num'): self.get_chat_title
         }
-
         if (trigger := command_trigger.get(message.command)) is not None:
             await trigger(chat_id=message.chat_id, text=message.text)
+
+    async def compare(self, message):
+        if message.chat_type == 'private' and message.command == '/mail':
+            await self.send_mailing(message)
+        elif message.chat_type in ['group', 'supergroup']:
+            await self.command_handler(message)
 
     async def update_handler(self, queue):
         while True:
@@ -219,5 +260,5 @@ if __name__ == '__main__':
 
     try:
         confbot.main()
-    except Exception:
-        print('Fail')
+    except Exception as ex:
+        print('Fail\n{}'.format(ex))
