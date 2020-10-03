@@ -10,6 +10,7 @@ class Message:
         self.chat_text = message.get('text')
         self.chat_id = message['chat']['id']
         self.chat_type = message['chat']['type']
+        self.user_id = message['from']['id']
         self.name = message['from']['first_name']
         self.username = (message.get('from', {})).get('username')
         if self.chat_text is not None and self.chat_text.startswith('/'):
