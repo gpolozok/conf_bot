@@ -5,6 +5,7 @@ import asyncpg
 import weather
 import covid
 import anekdot
+import conflict_help as ch
 from bot import Bot
 
 
@@ -28,25 +29,38 @@ class ConfBot:
     @property
     def triggers(self):
         return {
-            'help': '/help{}'.format(self.bot_name),
-            'weather': '/weather{}'.format(self.bot_name),
-            'covid': '/covid{}'.format(self.bot_name),
-            'anekdot': '/anekdot{}'.format(self.bot_name),
+            'nhelp': '/help{}'.format(self.bot_name),
+            'nweather': '/weather{}'.format(self.bot_name),
+            'ncovid': '/covid{}'.format(self.bot_name),
+            'nanekdot': '/anekdot{}'.format(self.bot_name),
+            'nepisode': '/ep{}'.format(self.bot_name),
+            'nepisode_edit': '/ep_edit{}'.format(self.bot_name),
+            'nepisode_num': '/ep_num{}'.format(self.bot_name),
+            'nnew_conflict': '/conflict{}'.format(self.bot_name),
+            'nend_conflict': '/conflict_end{}'.format(self.bot_name),
+            'nconflict_info': '/conflict_info{}'.format(self.bot_name),
+            'nconflict_help': '/conflict_help{}'.format(self.bot_name),
+            'help': '/help',
+            'weather': '/weather',
+            'covid': '/covid',
+            'anekdot': '/anekdot',
             'episode': '/ep',
             'episode_edit': '/ep_edit',
             'episode_num': '/ep_num',
-            'new_conflict': '/conflict'
+            'new_conflict': '/conflict',
+            'end_conflict': '/conflict_end',
+            'conflict_info': '/conflict_info',
+            'conflict_help': '/conflict_help'
         }
 
     async def db_connection(self):
-        conn = await asyncpg.connect(
+        return await asyncpg.connect(
             host=self.db_host,
             port=self.db_port,
             user=self.db_user,
             password=self.db_pass,
             database=self.db_name
         )
-        return conn
 
     async def get_birthdayboy(self, now):
         now_month = now.strftime('%m')
@@ -56,11 +70,11 @@ class ConfBot:
             'WHERE (SELECT EXTRACT(DAY FROM birthdate)) = ($1) ' \
             'AND (SELECT EXTRACT(MONTH FROM birthdate)) = ($2)'
         data = (int(now_day), int(now_month))
-        b_boy = await conn.fetchrow(sql, *data)
+        bdboy = await conn.fetchrow(sql, *data)
         await conn.close()
-        if not b_boy:
+        if not bdboy:
             return None
-        return (b_boy[0], b_boy[1])
+        return (bdboy[0], bdboy[1])
 
     async def greetings(self):
         now = datetime.datetime.now()
@@ -68,16 +82,16 @@ class ConfBot:
         while True:
             await asyncio.sleep(1200)
             now = datetime.datetime.now()
-            b_boy = await self.get_birthdayboy(now)
-            if b_boy:
+            bdboy = await self.get_birthdayboy(now)
+            if bdboy:
                 greetings = 'Доброе утро, господа!\n\n' \
                     'Cегодня особенный день - наш добрый друг {} ' \
                     'отмечает свой День Рождения!\n\n' \
                     '{}, бот поздравляет тебя и желает ' \
                     'счастья, любви и процветания!\n\n{}' \
                     .format(
-                        b_boy[0],
-                        b_boy[1],
+                        bdboy[0],
+                        bdboy[1],
                         await weather.get_weather()
                     )
             else:
@@ -101,14 +115,15 @@ class ConfBot:
             '2. /ep_edit <Название эпизода>\n' \
             'Редактировать название текущего эпизода\n\n' \
             '3. /ep_num <Номер эпизода>\n' \
-            'Показать название N эпизода\n\n' \
-            '4. /weather{n}\n' \
+            'Показать название N эпизода (min - 47)\n\n' \
+            '4. /weather\n' \
             'Показать погоду в Москве\n\n' \
-            '5. /anekdot{n}\n' \
+            '5. /anekdot\n' \
             'Рассказать Дрону анекдот\n\n' \
-            '6. /covid{n}\n' \
-            'Показать статистику по COVID-19 в России' \
-            .format(n=self.bot_name)
+            '6. /covid\n' \
+            'Показать статистику по COVID-19 в России\n\n' \
+            '7. /conflict_help\n' \
+            'Показать инструкцию по конфликтам'
         await self.bot.send_message(chat_id, bot_help)
 
     async def send_weather(self, **kwargs):
@@ -200,36 +215,165 @@ class ConfBot:
         chat_id = kwargs['chat_id']
         plaintiff_id = kwargs['user_id']
         text = kwargs['text']
-        if text is not None:
-            split = (kwargs['text']).split(" ", maxsplit=1)
-            defendant_username, reason = split \
-                if len(split) > 1 \
-                else (split[0], 'Отсутствует')
+        if text is None:
+            message = 'Введите username того, кому хотите объявит конфликт'
+            return await self.bot.send_message(chat_id, message)
+        split = (kwargs['text']).split(" ", maxsplit=1)
+        defendant_username, reason = split \
+            if len(split) > 1 \
+            else (split[0], 'Отсутствует')
+        conn = await self.db_connection()
+        sql = 'SELECT user_id FROM confbot.persons WHERE username = ($1)'
+        defendant_id = await conn.fetchrow(sql, defendant_username)
+        if defendant_id is None:
+            message = 'Такого username в конфе нет'
+        elif defendant_id[0] == plaintiff_id:
+            message = 'Нельзя конфликтовать с самим собой'
+        else:
+            sql = 'INSERT INTO confbot.conflicts ' \
+                '(user1_id, user2_id, reason, solved) ' \
+                'VALUES (($1), ($2), ($3), FALSE);'
+            data = (plaintiff_id, defendant_id[0], reason)
+            await conn.execute(sql, *data)
+            sql = 'SELECT username FROM confbot.persons ' \
+                'WHERE user_id = ($1)'
+            data = plaintiff_id
+            plaintiff_username = (await conn.fetchrow(sql, data))[0]
+            sql = 'SELECT MAX(id) from confbot.conflicts'
+            conflict_id = (await conn.fetchrow(sql))[0]
+            message = 'Внимание! ' \
+                'Между {} и {} назрел конфликт!\n\n' \
+                'Причина: {}\n\n' \
+                'id конфликта: {}' \
+                .format(
+                    plaintiff_username,
+                    defendant_username,
+                    reason,
+                    conflict_id)
+        conn.close()
+        await self.bot.send_message(chat_id, message)
+
+    async def finisher_check(self, conn, user_id, conflict_id):
+        user_id = user_id
+        sql = 'SELECT user1_id FROM confbot.conflicts WHERE id = ($1)'
+        plaintiff_id = (await conn.fetchrow(sql, conflict_id))
+        if plaintiff_id is not None:
+            return user_id == plaintiff_id[0]
+        else:
+            return False
+
+    async def end_conflict(self, **kwargs):
+        chat_id = kwargs['chat_id']
+        text = kwargs['text']
+        user_id = kwargs['user_id']
+        if text is None:
+            message = 'Введите id решенного конфликта'
+            return await self.bot.send_message(chat_id, message)
+        try:
             conn = await self.db_connection()
-            sql = 'SELECT user_id FROM confbot.persons WHERE username = ($1)'
-            data = defendant_username
-            defendant_id = (await conn.fetchrow(sql, data))[0]
-            if defendant_id is None:
-                message = 'Такого username в конфе нет'
-            elif defendant_id == plaintiff_id:
-                message = 'Нельзя конфликтовать с самим собой'
-            else:
-                sql = 'INSERT INTO confbot.conflicts ' \
-                    '(user1_id, user2_id, reason, solved) ' \
-                    'VALUES (($1), ($2), ($3), FALSE);'
-                data = (plaintiff_id, defendant_id, reason)
-                await conn.execute(sql, *data)
+            if await self.finisher_check(conn, user_id, int(text)):
+                sql = 'UPDATE confbot.conflicts SET solved=TRUE ' \
+                    'WHERE id = ($1)'
+                await conn.execute(sql, int(text))
                 sql = 'SELECT username FROM confbot.persons ' \
                     'WHERE user_id = ($1)'
-                data = plaintiff_id
-                plaintiff_username = (await conn.fetchrow(sql, data))[0]
-                message = 'Внимание! ' \
-                    'Между {} и {} назрел конфликт!\n\n' \
-                    'Причина: {}' \
-                    .format(plaintiff_username, defendant_username, reason)
-        else:
-            message = 'Введите username того, кому хотите объявит конфликт'
+                plaintiff = (await conn.fetchrow(sql, user_id))[0]
+                sql = 'SELECT username FROM confbot.persons WHERE ' \
+                    'user_id = (SELECT user2_id FROM confbot.conflicts ' \
+                    'WHERE id = ($1))'
+                defendant = (await conn.fetchrow(sql, int(text)))[0]
+                message = 'Решен конфликт №{} между {} и {}' \
+                    .format(text, plaintiff, defendant)
+            else:
+                sql = 'SELECT username FROM confbot.persons ' \
+                    'WHERE user_id = (SELECT user1_id from ' \
+                    'confbot.conflicts WHERE id = ($1))'
+                username = (await conn.fetchrow(sql, int(text)))
+                if username is not None:
+                    message = 'Не вы начали этот конфликт, завершить его ' \
+                        'может только {}'.format(username[0])
+                else:
+                    message = 'Конфликта с таким id нет'
+        except ValueError:
+            message = 'Введите корректный id'
         await self.bot.send_message(chat_id, message)
+
+    async def conflict_id_info(self, conn, conflict):
+        sql = 'SELECT username from confbot.persons WHERE user_id = ($1)'
+        plaintiff = (await conn.fetchrow(sql, conflict['user1_id']))[0]
+        defendant = (await conn.fetchrow(sql, conflict['user2_id']))[0]
+        reason = conflict['reason']
+        status = 'решен' if conflict['solved'] else 'не решен'
+        return 'Конфликт №{}\n' \
+            'Объявил конфликт: {}\n' \
+            'Принял конфликт: {}\n' \
+            'Причина: {}\n' \
+            'Статус: {}' \
+            .format(conflict['id'], plaintiff, defendant, reason, status)
+
+    async def conflict_user_info(self, conn, username):
+        unsolved = 0
+        accept_info = 'Принял конфликты: '
+        declare_info = 'Объявил конфликты: '
+        sql = 'SELECT id from confbot.conflicts WHERE ' \
+            'user2_id = (SELECT user_id from confbot.persons ' \
+            'WHERE username = ($1)) AND solved = FALSE'
+        accept_ids = await conn.fetch(sql, username)
+        for accept_id in accept_ids:
+            unsolved += 1
+            accept_info = accept_info + str(accept_id[0]) + ' '
+        sql = 'SELECT id from confbot.conflicts WHERE ' \
+            'user1_id = (SELECT user_id from confbot.persons ' \
+            'WHERE username = ($1)) AND solved = FALSE'
+        declare_ids = await conn.fetch(sql, username)
+        for declare_id in declare_ids:
+            unsolved += 1
+            declare_info = declare_info + str(declare_id[0]) + ' '
+        sql = 'SELECT COUNT(*) FROM confbot.conflicts WHERE (' \
+            ' user1_id = (SELECT user_id FROM confbot.persons ' \
+            'WHERE username = ($1)) ' \
+            'OR user2_id = (SELECT user_id FROM confbot.persons '\
+            'WHERE username = ($1))) ' \
+            'AND solved = true'
+        solved = (await conn.fetchrow(sql, username))[0]
+        solved_info = 'Решенных конфликтов: {}'.format(solved)
+        unsolved_info = 'Нерешенных конфликтов: {}'.format(unsolved)
+        return 'Конфликты {}\n{}\n{}\n{}\n{}' \
+            .format(
+                username,
+                solved_info,
+                unsolved_info,
+                declare_info,
+                accept_info
+            )
+
+    async def conflict_info(self, **kwargs):
+        chat_id = kwargs['chat_id']
+        text = kwargs['text']
+        if text is None:
+            message = 'Введите username или id конфликта'
+            return await self.bot.send_message(chat_id, message)
+        conn = await self.db_connection()
+        try:
+            sql = 'SELECT * FROM confbot.conflicts WHERE id = ($1)'
+            info = await conn.fetchrow(sql, int(text))
+            if info is None:
+                message = 'Конфликта с таким id не существует'
+            else:
+                message = await self.conflict_id_info(conn, info)
+        except ValueError:
+            conn = await self.db_connection()
+            sql = 'SELECT user_id FROM confbot.persons WHERE username = ($1)'
+            info = await conn.fetchrow(sql, text)
+            if info is None:
+                message = 'Введите корректный username или id конфликта'
+            else:
+                message = await self.conflict_user_info(conn, text)
+        await self.bot.send_message(chat_id, message)
+
+    async def conflict_help(self, **kwargs):
+        chat_id = kwargs['chat_id']
+        return await self.bot.send_message(chat_id, ch.conflict_help)
 
     async def command_handler(self, message):
         triggers = self.triggers
@@ -241,7 +385,20 @@ class ConfBot:
             triggers.get('episode'): self.new_chat_title,
             triggers.get('episode_edit'): self.edit_chat_title,
             triggers.get('episode_num'): self.get_chat_title,
-            triggers.get('new_conflict'): self.new_conflict
+            triggers.get('new_conflict'): self.new_conflict,
+            triggers.get('end_conflict'): self.end_conflict,
+            triggers.get('conflict_info'): self.conflict_info,
+            triggers.get('conflict_help'): self.conflict_help,
+            triggers.get('nhelp'): self.send_help,
+            triggers.get('nweather'): self.send_weather,
+            triggers.get('ncovid'): self.send_covid,
+            triggers.get('nanekdot'): self.send_anekdot,
+            triggers.get('nepisode'): self.new_chat_title,
+            triggers.get('nepisode_edit'): self.edit_chat_title,
+            triggers.get('nepisode_num'): self.get_chat_title,
+            triggers.get('nnew_conflict'): self.new_conflict,
+            triggers.get('nend_conflict'): self.end_conflict,
+            triggers.get('nconflict_help'): self.conflict_help
         }
         if (trigger := command_trigger.get(message.command)) is not None:
             await trigger(
