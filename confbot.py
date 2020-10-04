@@ -100,13 +100,13 @@ class ConfBot:
                     'Желаю всем удачного дня!' \
                     .format(await weather.get_weather())
             if today == now.day and now.hour == 8:
-                await self.bot.send_message(self.group_id, greetings)
+                await self.bot.send_message(self.supergroup_id, greetings)
                 today = (datetime.date.today() + datetime.timedelta(days=1)) \
                     .day
 
     async def send_mailing(self, message):
         if message.username == 'grisha1505':
-            await self.bot.send_message(self.group_id, message.text)
+            await self.bot.send_message(self.supergroup_id, message.text)
 
     async def send_help(self, **kwargs):
         chat_id = kwargs['chat_id']
