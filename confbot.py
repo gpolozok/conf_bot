@@ -62,7 +62,7 @@ class ConfBot:
             database=self.db_name
         )
 
-    async def get_birthdayboy(self, now):
+    async def get_greetings(self, now):
         now_month = now.strftime('%m')
         now_day = now.strftime('%d')
         conn = await self.db_connection()
@@ -71,36 +71,52 @@ class ConfBot:
             'AND (SELECT EXTRACT(MONTH FROM birthdate)) = ($2)'
         data = (int(now_day), int(now_month))
         bdboy = await conn.fetchrow(sql, *data)
-        await conn.close()
-        if not bdboy:
+        if bdboy:
+            return 'Доброе утро, господа!\n\n' \
+                'Cегодня особенный день - наш добрый друг {} ' \
+                'отмечает свой День Рождения!\n\n' \
+                '{}, бот поздравляет тебя и желает ' \
+                'счастья, любви и процветания!\n\n{}' \
+                .format(
+                    bdboy[0],
+                    bdboy[1],
+                    await weather.get_weather()
+                )
+        sql = 'SELECT firstname, username, companion FROM confbot.persons ' \
+            'WHERE (SELECT EXTRACT(DAY FROM compbirthdate)) = ($1) ' \
+            'AND (SELECT EXTRACT(MONTH FROM compbirthdate)) = ($2)'
+        bdboy = await conn.fetchrow(sql, *data)
+        if bdboy:
+            return 'Доброе утро, господа!\n\n' \
+                'Cегодня особенный день - {}, '\
+                'девушка, которой посвятил жизнь {}, ' \
+                'отмечает свой День Рождения!\n\n' \
+                '{}, бот поздравляет твою спутницу c этим ' \
+                'знаменательным днем и желает ' \
+                'счастья, любви и процветания!\n\n{}' \
+                .format(
+                    bdboy[2],
+                    bdboy[0],
+                    bdboy[1],
+                    await weather.get_weather()
+                )
+        else:
             return None
-        return (bdboy[0], bdboy[1])
 
     async def greetings(self):
         now = datetime.datetime.now()
         today = now.day
         while True:
-            await asyncio.sleep(1200)
+            await asyncio.sleep(900)
             now = datetime.datetime.now()
-            bdboy = await self.get_birthdayboy(now)
-            if bdboy:
-                greetings = 'Доброе утро, господа!\n\n' \
-                    'Cегодня особенный день - наш добрый друг {} ' \
-                    'отмечает свой День Рождения!\n\n' \
-                    '{}, бот поздравляет тебя и желает ' \
-                    'счастья, любви и процветания!\n\n{}' \
-                    .format(
-                        bdboy[0],
-                        bdboy[1],
-                        await weather.get_weather()
-                    )
-            else:
+            greetings = await self.get_greetings(now)
+            if greetings is None:
                 greetings = 'Доброе утро, господа!\n\n' \
                     '{}\n' \
                     'Желаю всем удачного дня!' \
                     .format(await weather.get_weather())
             if today == now.day and now.hour == 8:
-                await self.bot.send_message(self.supergroup_id, greetings)
+                await self.bot.send_message(self.group_id, greetings)
                 today = (datetime.date.today() + datetime.timedelta(days=1)) \
                     .day
 
@@ -250,7 +266,7 @@ class ConfBot:
                     defendant_username,
                     reason,
                     conflict_id)
-        conn.close()
+        await conn.close()
         await self.bot.send_message(chat_id, message)
 
     async def finisher_check(self, conn, user_id, conflict_id):
@@ -296,6 +312,7 @@ class ConfBot:
                     message = 'Конфликта с таким id нет'
         except ValueError:
             message = 'Введите корректный id'
+        await conn.close()
         await self.bot.send_message(chat_id, message)
 
     async def conflict_id_info(self, conn, conflict):
@@ -362,13 +379,13 @@ class ConfBot:
             else:
                 message = await self.conflict_id_info(conn, info)
         except ValueError:
-            conn = await self.db_connection()
             sql = 'SELECT user_id FROM confbot.persons WHERE username = ($1)'
             info = await conn.fetchrow(sql, text)
             if info is None:
                 message = 'Введите корректный username или id конфликта'
             else:
                 message = await self.conflict_user_info(conn, text)
+        await conn.close()
         await self.bot.send_message(chat_id, message)
 
     async def conflict_help(self, **kwargs):
@@ -398,6 +415,7 @@ class ConfBot:
             triggers.get('nepisode_num'): self.get_chat_title,
             triggers.get('nnew_conflict'): self.new_conflict,
             triggers.get('nend_conflict'): self.end_conflict,
+            triggers.get('nconflict_info'): self.conflict_info,
             triggers.get('nconflict_help'): self.conflict_help
         }
         if (trigger := command_trigger.get(message.command)) is not None:
