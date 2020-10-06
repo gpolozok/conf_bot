@@ -107,7 +107,7 @@ class ConfBot:
         now = datetime.datetime.now()
         today = now.day
         while True:
-            await asyncio.sleep(3)
+            await asyncio.sleep(900)
             now = datetime.datetime.now()
             greetings = await self.get_greetings(now)
             if greetings is None:
@@ -115,7 +115,7 @@ class ConfBot:
                     '{}\n' \
                     'Желаю всем удачного дня!' \
                     .format(await weather.get_weather())
-            if today == now.day and now.hour == 13:
+            if today == now.day and now.hour == 8:
                 await self.bot.send_message(self.supergroup_id, greetings)
                 today = (datetime.date.today() + datetime.timedelta(days=1)) \
                     .day
