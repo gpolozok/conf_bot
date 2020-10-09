@@ -11,5 +11,4 @@ async def get_anekdot():
 
     soup = BeautifulSoup(webpage, 'html.parser')
     mydivs = soup.find('div', attrs={'class': 'anekdot-content'})
-    anekdot = mydivs.text
-    return '@Naravir, анекдот для тебя:\n{}'.format(anekdot)
+    return mydivs.text

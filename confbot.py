@@ -101,24 +101,23 @@ class ConfBot:
                     await weather.get_weather()
                 )
         else:
-            return None
+            return 'Доброе утро, господа!\n\n' \
+                '{}\n' \
+                'Желаю всем удачного дня!' \
+                .format(await weather.get_weather())
 
     async def greetings(self):
         now = datetime.datetime.now()
-        today = now.day
+        sent = False
         while True:
             await asyncio.sleep(900)
             now = datetime.datetime.now()
             greetings = await self.get_greetings(now)
-            if greetings is None:
-                greetings = 'Доброе утро, господа!\n\n' \
-                    '{}\n' \
-                    'Желаю всем удачного дня!' \
-                    .format(await weather.get_weather())
-            if today == now.day and now.hour == 8:
+            if now.hour == 0:
+                sent = False
+            if sent is False and now.hour == 8:
                 await self.bot.send_message(self.supergroup_id, greetings)
-                today = (datetime.date.today() + datetime.timedelta(days=1)) \
-                    .day
+                sent = True
 
     async def send_mailing(self, message):
         if message.username == 'grisha1505':
@@ -135,7 +134,7 @@ class ConfBot:
             '4. /weather\n' \
             'Показать погоду в Москве\n\n' \
             '5. /anekdot\n' \
-            'Рассказать Дрону анекдот\n\n' \
+            'Рассказать анекдот\n\n' \
             '6. /covid\n' \
             'Показать статистику по COVID-19 в России\n\n' \
             '7. /conflict_help\n' \
@@ -232,7 +231,7 @@ class ConfBot:
         plaintiff_id = kwargs['user_id']
         text = kwargs['text']
         if text is None:
-            message = 'Введите username того, кому хотите объявит конфликт'
+            message = 'Введите username того, кому хотите объявить конфликт'
             return await self.bot.send_message(chat_id, message)
         split = (kwargs['text']).split(" ", maxsplit=1)
         defendant_username, reason = split \
