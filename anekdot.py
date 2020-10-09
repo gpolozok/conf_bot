@@ -11,4 +11,7 @@ async def get_anekdot():
 
     soup = BeautifulSoup(webpage, 'html.parser')
     mydivs = soup.find('div', attrs={'class': 'anekdot-content'})
-    return mydivs.text
+    if mydivs is not None:
+        return mydivs.text
+    else:
+        return 'Анекдот не доступен'
