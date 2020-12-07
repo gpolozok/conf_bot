@@ -25,6 +25,7 @@ class ConfBot:
         self.db_port = config['db_port']
         self.db_user = config['db_user']
         self.db_pass = config['db_pass']
+        self.my_name = config['my_name']
 
     @property
     def triggers(self):
@@ -107,20 +108,19 @@ class ConfBot:
                 .format(await weather.get_weather())
 
     async def greetings(self):
-        now = datetime.datetime.now()
         sent = False
         while True:
-            await asyncio.sleep(900)
+            await asyncio.sleep(600)
             now = datetime.datetime.now()
-            greetings = await self.get_greetings(now)
-            if now.hour == 0:
+            if now.hour == 10:
                 sent = False
-            if sent is False and now.hour == 8:
+            if sent is False and now.hour == 9:
+                greetings = await self.get_greetings(now)
                 await self.bot.send_message(self.supergroup_id, greetings)
                 sent = True
 
     async def send_mailing(self, message):
-        if message.username == 'grisha1505':
+        if message.username == self.my_name:
             await self.bot.send_message(self.supergroup_id, message.text)
 
     async def send_help(self, **kwargs):
